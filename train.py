@@ -22,6 +22,9 @@ CONFIG = {
     "batch_size": 128,
     "context_length": 32,
     "d_model": 128,
+    "d_mlp": 256,
+    "num_heads": 4,
+    "num_layers": 2,
     "steps": 1000,
     "learning_rate": 0.001,
 }
@@ -100,7 +103,7 @@ def train(model: nn.Module, optimizer, config=CONFIG):
         losses.append(loss.item())
 
         pbar.set_description(f"loss: ({loss.item():.2f})")
-    
+
     print(evaluate_loss(model))
 
 
@@ -108,8 +111,10 @@ if __name__ == "__main__":
     dataset = mx.array(encode(lines))
 
     xs, ys = get_batches(dataset, "train", 8, 16)
-
-    model = Llama(CONFIG)
+    c = CONFIG
+    model = Llama(
+        c["num_layers"], c["vocab_size"], c["num_heads"], c["d_model"], c["d_mlp"]
+    )
 
     nparams = sum(
         x.size for k, x in tree_flatten(model.parameters()) if "embedding" not in k
