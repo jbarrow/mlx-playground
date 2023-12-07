@@ -7,12 +7,12 @@ import math
 
 @dataclass
 class ModelArgs:
-    block_size: int = 8
+    block_size: int = 16
     vocab_size: int = 65
     n_layers: int = 4
     n_heads: int = 8
-    dims: int = 512
-    intermediate_size: int = 512
+    dims: int = 256
+    intermediate_size: int = 128
     n_local_heads: int = -1
     head_dim: int = 64
     rope_base: float = 10_000
@@ -30,7 +30,6 @@ class ModelArgs:
         self.head_dim = self.dims // self.n_heads
 
 
-
 class FeedForward(nn.Module):
     def __init__(self, config: ModelArgs) -> None:
         super().__init__()
@@ -43,7 +42,6 @@ class FeedForward(nn.Module):
         a = self.w1(x)
         b = self.w2(x)
         return self.w3(a * mx.sigmoid(a) * b)
-
 
 
 class Attention(nn.Module):
@@ -109,15 +107,11 @@ class TransformerBlock(nn.Module):
 
 
 class Llama(nn.Module):
-    def __init__(
-        self, config: ModelArgs
-    ) -> None:
+    def __init__(self, config: ModelArgs) -> None:
         super().__init__()
 
         self.embedding = nn.Embedding(config.vocab_size, config.dims)
-        self.attention = [
-            TransformerBlock(config) for _ in range(config.n_layers)
-        ]
+        self.attention = [TransformerBlock(config) for _ in range(config.n_layers)]
         self.norm = nn.RMSNorm(config.dims)
         self.out_proj = nn.Linear(config.dims, config.vocab_size, bias=False)
 
@@ -127,10 +121,10 @@ class Llama(nn.Module):
 
         x = self.embedding(idx)
         for encoding_layer in self.attention:
-            y = encoding_layer(x, mask)
-        y = self.norm(y)
+            x = encoding_layer(x, mask)
+        x = self.norm(x)
 
-        return self.out_proj(y)
+        return self.out_proj(x)
 
     def loss(self, x, y):
         logits = self(x)

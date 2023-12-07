@@ -7,6 +7,7 @@ from mlxllama.optim import AdamW
 from mlx.utils import tree_flatten
 from tqdm import tqdm
 
+import mlx.optimizers as optim
 import mlx.core as mx
 import mlx.nn as nn
 
@@ -73,7 +74,7 @@ def evaluate_loss(model, config=CONFIG) -> dict[str, mx.array]:
             xb, yb = get_batches(
                 dataset, split, config["batch_size"], config["context_length"], config
             )
-            loss = model.loss(xs, ys)
+            loss = model.loss(xb, yb)
             losses.append(loss.item())
         out[split] = mx.mean(mx.array(losses)).item()
     return out
@@ -105,15 +106,15 @@ def train(model: nn.Module, optimizer, config=CONFIG):
 if __name__ == "__main__":
     dataset = mx.array(encode(lines))
 
-    xs, ys = get_batches(dataset, "train", 8, 16)
     args = ModelArgs()
     model = Llama(args)
 
     nparams = sum(
-        x.size for k, x in tree_flatten(model.parameters()) if "embedding" not in k
+        x.size for k, x in tree_flatten(model.parameters())
     )
     print(f"training a model with {nparams} trainable params")
 
-    optimizer = AdamW(learning_rate=CONFIG["learning_rate"])
+    # optimizer = AdamW(learning_rate=CONFIG["learning_rate"])
+    optimizer = optim.Adam(learning_rate=CONFIG["learning_rate"])
 
     train(model, optimizer)
