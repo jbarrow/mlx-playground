@@ -38,4 +38,4 @@ class AdamW(Optimizer):
         state["m"] = m
         state["v"] = v
 
-        return parameter - lr * (m / (mx.sqrt(v) + eps) + wd)
+        return parameter - lr * (m / (mx.sqrt(v) + eps) + wd * parameter)
