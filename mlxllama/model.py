@@ -1,19 +1,62 @@
+from dataclasses import dataclass
+
 import mlx.nn as nn
 import mlx.core as mx
 import math
 
 
-class LlamaAttention(nn.Module):
-    def __init__(self, dims: int, num_heads: int):
+@dataclass
+class ModelArgs:
+    block_size: int = 8
+    vocab_size: int = 65
+    n_layers: int = 4
+    n_heads: int = 8
+    dims: int = 256
+    intermediate_size: int = 256
+    n_local_heads: int = -1
+    head_dim: int = 64
+    rope_base: float = 10_000
+    norm_eps: float = 1e-5
+
+    def __post_init__(self):
+        if self.n_local_heads == -1:
+            self.n_local_heads = self.n_heads
+
+        # if self.intermediate_size is None:
+        #     hidden_dim = 4 * self.dims
+        #     n_hidden = int(2 * hidden_dim / 3)
+        #     self.intermediate_size = find_multiple(n_hidden, 256)
+
+        self.head_dim = self.dims // self.n_heads
+
+
+
+class FeedForward(nn.Module):
+    def __init__(self, config: ModelArgs) -> None:
+        super().__init__()
+        self.w1 = nn.Linear(config.dims, config.intermediate_size, bias=False)
+        self.w2 = nn.Linear(config.dims, config.intermediate_size, bias=False)
+        self.w3 = nn.Linear(config.intermediate_size, config.dims, bias=False)
+
+    def __call__(self, x: mx.array) -> mx.array:
+        # compute the SwiGLU activation of x
+        a = self.w1(x)
+        b = self.w2(x)
+        return self.w3(a * mx.sigmoid(a) * b)
+
+
+
+class Attention(nn.Module):
+    def __init__(self, config: ModelArgs):
         super().__init__()
 
-        self.num_heads = num_heads
+        self.num_heads = config.n_heads
 
-        self.rope = nn.RoPE(dims // num_heads, traditional=True)
-        self.query_proj = nn.Linear(dims, dims, bias=False)
-        self.key_proj = nn.Linear(dims, dims, bias=False)
-        self.value_proj = nn.Linear(dims, dims, bias=False)
-        self.out_proj = nn.Linear(dims, dims, bias=False)
+        self.rope = nn.RoPE(config.dims // config.n_heads, traditional=True)
+        self.query_proj = nn.Linear(config.dims, config.dims, bias=False)
+        self.key_proj = nn.Linear(config.dims, config.dims, bias=False)
+        self.value_proj = nn.Linear(config.dims, config.dims, bias=False)
+        self.out_proj = nn.Linear(config.dims, config.dims, bias=False)
 
     def __call__(self, queries, keys, values, mask=None, cache=None):
         queries = self.query_proj(queries)
@@ -44,29 +87,22 @@ class LlamaAttention(nn.Module):
         return self.out_proj(values_hat)
 
 
-class LlamaEncoderLayer(nn.Module):
-    def __init__(self, dims: int, mlp_dims: int, num_heads: int) -> None:
+class TransformerBlock(nn.Module):
+    def __init__(self, config: ModelArgs) -> None:
         super().__init__()
 
-        self.attention = LlamaAttention(dims, num_heads)
-
-        self.norm1 = nn.RMSNorm(dims)
-        self.norm2 = nn.RMSNorm(dims)
-
-        self.linear1 = nn.Linear(dims, mlp_dims, bias=False)
-        self.linear2 = nn.Linear(dims, mlp_dims, bias=False)
-        self.linear3 = nn.Linear(mlp_dims, dims, bias=False)
+        self.attention = Attention(config)
+        self.feed_forward = FeedForward(config)
+        self.ffn_norm = nn.RMSNorm(config.dims, config.norm_eps)
+        self.attention_norm = nn.RMSNorm(config.dims, config.norm_eps)
 
     def __call__(self, x, mask=None):
-        y = self.norm1(x)
+        y = self.attention_norm(x)
         y = self.attention(y, y, y, mask)
         x = x + y
 
-        y = self.norm2(x)
-        a = self.linear1(y)
-        b = self.linear2(y)
-        y = a * mx.sigmoid(a) * b
-        y = self.linear3(y)
+        y = self.ffn_norm(x)
+        y = self.feed_forward(y)
         x = x + y
 
         return x
@@ -74,16 +110,16 @@ class LlamaEncoderLayer(nn.Module):
 
 class Llama(nn.Module):
     def __init__(
-        self, num_layers: int, vocab_size: int, num_heads: int, dims: int, mlp_dims: int
+        self, config: ModelArgs
     ) -> None:
         super().__init__()
 
-        self.embedding = nn.Embedding(vocab_size, dims)
+        self.embedding = nn.Embedding(config.vocab_size, config.dims)
         self.attention = [
-            LlamaEncoderLayer(dims, mlp_dims, num_heads) for _ in range(num_layers)
+            TransformerBlock(config) for _ in range(config.n_layers)
         ]
-        self.norm = nn.RMSNorm(dims)
-        self.out_proj = nn.Linear(dims, vocab_size, bias=False)
+        self.norm = nn.RMSNorm(config.dims)
+        self.out_proj = nn.Linear(config.dims, config.vocab_size, bias=False)
 
     def __call__(self, idx: mx.array):
         mask = nn.MultiHeadAttention.create_additive_causal_mask(idx.shape[1])

@@ -2,7 +2,7 @@
 Super simple train.py, getting started without any tokenizers,
 and with a very simple training loop.
 """
-from mlxllama.model import Llama
+from mlxllama.model import Llama, ModelArgs
 from mlx.utils import tree_flatten
 from tqdm import tqdm
 
@@ -18,13 +18,8 @@ itos = {i: ch for i, ch in enumerate(vocab)}
 stoi = {ch: i for i, ch in enumerate(vocab)}
 
 CONFIG = {
-    "vocab_size": len(vocab),
-    "batch_size": 128,
-    "context_length": 32,
-    "d_model": 128,
-    "d_mlp": 256,
-    "num_heads": 4,
-    "num_layers": 2,
+    "context_length": 8,
+    "batch_size": 10,
     "steps": 1000,
     "learning_rate": 0.001,
 }
@@ -111,10 +106,8 @@ if __name__ == "__main__":
     dataset = mx.array(encode(lines))
 
     xs, ys = get_batches(dataset, "train", 8, 16)
-    c = CONFIG
-    model = Llama(
-        c["num_layers"], c["vocab_size"], c["num_heads"], c["d_model"], c["d_mlp"]
-    )
+    args = ModelArgs()
+    model = Llama(args)
 
     nparams = sum(
         x.size for k, x in tree_flatten(model.parameters()) if "embedding" not in k
