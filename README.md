@@ -1,7 +1,7 @@
 # 🍏🦙 `mlxllama`
 
 Run llama on your Macbooks' GPU!
-Working towards a fast reimplementation of llama-2 in [https://ml-explore.github.io/mlx/build/html/index.html](mlx).
+Working towards a fast reimplementation of llama-2 in [mlx](https://ml-explore.github.io/mlx/build/html/index.html).
 
 The aim is that the only dependencies are:
 - `mlx`
@@ -20,7 +20,7 @@ This project will be considered complete once these goals are achieved.
 - [ ] AdamW implementation
 - [ ] learning rate scheduling 
 - [ ] conversion script for HF format to MLX format
-- [ ] Add [https://github.com/pytorch-labs/gpt-fast](gpt-fast) optimizations
+- [ ] Add [gpt-fast](https://github.com/pytorch-labs/gpt-fast) optimizations
 - [ ] LoRA for fine-tuning
 
 ## Installation
@@ -47,5 +47,5 @@ python generate.py <model> <prompt>
 
 Some great resources:
 
-- [https://blog.briankitano.com/llama-from-scratch/](Brian Kitano's LLaMa from Scratch)
-- [https://github.com/pytorch-labs/gpt-fast](PyTorch lab's `gpt-fast`)
+- [Brian Kitano's LLaMa from Scratch](https://blog.briankitano.com/llama-from-scratch/)
+- [PyTorch lab's `gpt-fast`](https://github.com/pytorch-labs/gpt-fast)
