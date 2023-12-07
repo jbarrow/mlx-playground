@@ -1,6 +1,7 @@
 # mlxllama
 
-Working towards a fast reimplementation of llama-2 in mlx
+Run llama on your Macbooks' GPU!
+Working towards a fast reimplementation of llama-2 in mlx.
 
 ## Project Goals
 
@@ -25,3 +26,7 @@ With an optional dev dependency of:
 ```
 pip install -Ue .
 ```
+
+## Usage
+
+🚧 TBD
