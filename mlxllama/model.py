@@ -11,8 +11,8 @@ class ModelArgs:
     vocab_size: int = 65
     n_layers: int = 4
     n_heads: int = 8
-    dims: int = 256
-    intermediate_size: int = 256
+    dims: int = 512
+    intermediate_size: int = 512
     n_local_heads: int = -1
     head_dim: int = 64
     rope_base: float = 10_000

@@ -17,7 +17,7 @@ These will be checked off as they're completed.
 This project will be considered complete once these goals are achieved.
 
 - [ ] model reimplementation in MLX
-- [ ] AdamW implementation
+- [x] AdamW implementation
 - [ ] learning rate scheduling 
 - [ ] conversion script for HF format to MLX format
 - [ ] Add [gpt-fast](https://github.com/pytorch-labs/gpt-fast) optimizations

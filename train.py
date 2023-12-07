@@ -3,12 +3,12 @@ Super simple train.py, getting started without any tokenizers,
 and with a very simple training loop.
 """
 from mlxllama.model import Llama, ModelArgs
+from mlxllama.optim import AdamW
 from mlx.utils import tree_flatten
 from tqdm import tqdm
 
 import mlx.core as mx
 import mlx.nn as nn
-import mlx.optimizers as optim
 
 
 lines = open("./data/example.txt", "r").read()
@@ -18,7 +18,7 @@ itos = {i: ch for i, ch in enumerate(vocab)}
 stoi = {ch: i for i, ch in enumerate(vocab)}
 
 CONFIG = {
-    "context_length": 8,
+    "context_length": 16,
     "batch_size": 10,
     "steps": 1000,
     "learning_rate": 0.001,
@@ -114,6 +114,6 @@ if __name__ == "__main__":
     )
     print(f"training a model with {nparams} trainable params")
 
-    optimizer = optim.Adam(learning_rate=CONFIG["learning_rate"])
+    optimizer = AdamW(learning_rate=CONFIG["learning_rate"])
 
     train(model, optimizer)
