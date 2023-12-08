@@ -20,7 +20,7 @@ stoi = {ch: i for i, ch in enumerate(vocab)}
 
 CONFIG = {
     "context_length": 16,
-    "batch_size": 10,
+    "batch_size": 32,
     "steps": 1000,
     "learning_rate": 0.001,
 }
@@ -109,12 +109,12 @@ if __name__ == "__main__":
     args = ModelArgs()
     model = Llama(args)
 
-    nparams = sum(
-        x.size for k, x in tree_flatten(model.parameters())
-    )
+    nparams = sum(x.size for k, x in tree_flatten(model.parameters()))
     print(f"training a model with {nparams} trainable params")
 
-    # optimizer = AdamW(learning_rate=CONFIG["learning_rate"])
-    optimizer = optim.Adam(learning_rate=CONFIG["learning_rate"])
+    optimizer = AdamW(
+        learning_rate=CONFIG["learning_rate"], weight_decay=0.1, betas=[0.9, 0.95]
+    )
+    # optimizer = optim.Adam(learning_rate=CONFIG["learning_rate"])
 
     train(model, optimizer)

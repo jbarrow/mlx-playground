@@ -1,8 +1,8 @@
 from dataclasses import dataclass
+from typing import Optional, Tuple
 
 import mlx.nn as nn
 import mlx.core as mx
-import math
 
 
 @dataclass
@@ -12,11 +12,12 @@ class ModelArgs:
     n_layers: int = 4
     n_heads: int = 8
     dims: int = 256
-    intermediate_size: int = 128
+    intermediate_size: int = 512
     n_local_heads: int = -1
     head_dim: int = 64
     rope_base: float = 10_000
     norm_eps: float = 1e-5
+    n_kv_heads: int = 4
 
     def __post_init__(self):
         if self.n_local_heads == -1:
@@ -34,55 +35,72 @@ class FeedForward(nn.Module):
     def __init__(self, config: ModelArgs) -> None:
         super().__init__()
         self.w1 = nn.Linear(config.dims, config.intermediate_size, bias=False)
-        self.w2 = nn.Linear(config.dims, config.intermediate_size, bias=False)
-        self.w3 = nn.Linear(config.intermediate_size, config.dims, bias=False)
+        self.w2 = nn.Linear(config.intermediate_size, config.dims, bias=False)
+        self.w3 = nn.Linear(config.dims, config.intermediate_size, bias=False)
 
     def __call__(self, x: mx.array) -> mx.array:
-        # compute the SwiGLU activation of x
-        a = self.w1(x)
-        b = self.w2(x)
-        return self.w3(a * mx.sigmoid(a) * b)
+        return self.w2(nn.silu(self.w1(x)) * self.w3(x))
 
 
 class Attention(nn.Module):
     def __init__(self, config: ModelArgs):
         super().__init__()
+        self.args = config
 
-        self.num_heads = config.n_heads
+        self.n_heads: int = config.n_heads
+        self.n_kv_heads: int = config.n_kv_heads
 
-        self.rope = nn.RoPE(config.dims // config.n_heads, traditional=True)
-        self.query_proj = nn.Linear(config.dims, config.dims, bias=False)
-        self.key_proj = nn.Linear(config.dims, config.dims, bias=False)
-        self.value_proj = nn.Linear(config.dims, config.dims, bias=False)
-        self.out_proj = nn.Linear(config.dims, config.dims, bias=False)
+        self.repeats = self.n_heads // self.n_kv_heads
 
-    def __call__(self, queries, keys, values, mask=None, cache=None):
-        queries = self.query_proj(queries)
-        keys = self.key_proj(keys)
-        values = self.value_proj(values)
+        self.scale = self.args.head_dim**-0.5
 
-        # Extract some shapes
-        num_heads = self.num_heads
-        B, L, D = queries.shape
+        self.wq = nn.Linear(config.dims, config.n_heads * config.head_dim, bias=False)
+        self.wk = nn.Linear(
+            config.dims, config.n_kv_heads * config.head_dim, bias=False
+        )
+        self.wv = nn.Linear(
+            config.dims, config.n_kv_heads * config.head_dim, bias=False
+        )
+        self.wo = nn.Linear(config.n_heads * config.head_dim, config.dims, bias=False)
+        self.rope = nn.RoPE(config.head_dim, traditional=True)
+
+    def __call__(
+        self,
+        x: mx.array,
+        mask: Optional[mx.array] = None,
+        cache: Optional[Tuple[mx.array, mx.array]] = None,
+    ) -> mx.array:
+        B, L, D = x.shape
+
+        queries, keys, values = self.wq(x), self.wk(x), self.wv(x)
 
         # Prepare the queries, keys and values for the attention computation
-        queries = queries.reshape(B, L, num_heads, -1).transpose(0, 2, 1, 3)
-        keys = keys.reshape(B, L, num_heads, -1).transpose(0, 2, 1, 3)
-        values = values.reshape(B, L, num_heads, -1).transpose(0, 2, 1, 3)
+        queries = queries.reshape(B, L, self.n_heads, -1).transpose(0, 2, 1, 3)
+        keys = keys.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
+        values = values.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
 
-        queries = self.rope(queries)
-        keys = self.rope(keys)
+        def repeat(a):
+            a = mx.concatenate([mx.expand_dims(a, 2)] * self.repeats, axis=2)
+            return a.reshape([B, self.n_heads, L, -1])
 
-        # Finally perform the attention computation
-        scale = math.sqrt(1 / queries.shape[-1])
-        scores = (queries * scale) @ keys.transpose(0, 1, 3, 2)
+        keys, values = map(repeat, (keys, values))
+
+        if cache is not None:
+            key_cache, value_cache = cache
+            queries = self.rope(queries, offset=key_cache.shape[2])
+            keys = self.rope(keys, offset=key_cache.shape[2])
+            keys = mx.concatenate([key_cache, keys], axis=2)
+            values = mx.concatenate([value_cache, values], axis=2)
+        else:
+            queries = self.rope(queries)
+            keys = self.rope(keys)
+
+        scores = (queries * self.scale) @ keys.transpose(0, 1, 3, 2)
         if mask is not None:
-            scores = scores + mask
-        scores = mx.softmax(scores, axis=-1)
-        values_hat = (scores @ values).transpose(0, 2, 1, 3).reshape(B, L, -1)
-
-        # Note that we return the keys and values to possibly be used as a cache
-        return self.out_proj(values_hat)
+            scores += mask
+        scores = mx.softmax(scores.astype(mx.float32), axis=-1).astype(scores.dtype)
+        output = (scores @ values).transpose(0, 2, 1, 3).reshape(B, L, -1)
+        return self.wo(output), (keys, values)
 
 
 class TransformerBlock(nn.Module):
@@ -96,7 +114,7 @@ class TransformerBlock(nn.Module):
 
     def __call__(self, x, mask=None):
         y = self.attention_norm(x)
-        y = self.attention(y, y, y, mask)
+        y, _ = self.attention(y, mask)
         x = x + y
 
         y = self.ffn_norm(x)
