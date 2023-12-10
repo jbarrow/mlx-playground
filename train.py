@@ -2,8 +2,8 @@
 Super simple train.py, getting started without any tokenizers,
 and with a very simple training loop.
 """
-from mlxllama.model import Llama, ModelArgs
-from mlxllama.optim import AdamW
+from llama.model import Llama, ModelArgs
+from llama.optim import AdamW
 from mlx.utils import tree_flatten
 from tqdm import tqdm
 

@@ -1,12 +1,13 @@
-# 🍏🦙 `mlxllama`
+# 🍏🤖 `mlx-playground`
 
-Run llama on your Macbooks' GPU!
-Working towards a fast reimplementation of llama-2 in [mlx](https://ml-explore.github.io/mlx/build/html/index.html).
+Run fast transformer decoders  on your Macbooks' GPU!
+Working towards a fast reimplementation of GPT-2 and Llama-like models in [mlx](https://ml-explore.github.io/mlx/build/html/index.html).
 
 The aim is that the only dependencies are:
 - `mlx`
 - `sentencepiece`
 - `tqdm`
+- `numpy`
 
 With an optional dev dependency of:
 - `transformers` for downloading and converting weights
@@ -16,12 +17,12 @@ With an optional dev dependency of:
 These will be checked off as they're completed.
 This project will be considered complete once these goals are achieved.
 
-- [ ] model reimplementation in MLX
-- [x] AdamW implementation
-- [ ] learning rate scheduling 
+- [ ] GPT-2 reimplementation in MLX
+- [x] ~~llama reimplementation~~ (train your own makemore llama w/ `python train.py`!)
 - [ ] conversion script for HF format to MLX format
-- [ ] Add [gpt-fast](https://github.com/pytorch-labs/gpt-fast) optimizations
-- [ ] LoRA for fine-tuning
+- [ ] speculative decoding
+- [x] ~~AdamW implementation~~ [merged!](https://github.com/ml-explore/mlx/pull/72)
+- [ ] learning rate scheduling 
 
 ## Installation
 
