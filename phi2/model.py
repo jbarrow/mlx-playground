@@ -116,9 +116,11 @@ class TransformerDecoder(nn.Module):
         ]
 
     def __call__(self, x, x_mask):
-        for layer in self.h:
+        for layer in self.h[:1]:
             print(x)
             x = layer(x, x_mask)
+            print(x)
+            print(x.shape)
         return x
 
 
@@ -139,9 +141,7 @@ class Phi2(nn.Module):
         attention_mask: mx.array = None,
     ) -> tuple[mx.array, mx.array]:
         x = self.wte(input_ids)
-        print(x)
-        print(x.shape)
-        return x
+
         if attention_mask is not None:
             # convert 0's to -infs, 1's to 0's, and make it broadcastable
             attention_mask = mx.log(attention_mask)
