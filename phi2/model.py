@@ -140,6 +140,8 @@ class Phi2(nn.Module):
     ) -> tuple[mx.array, mx.array]:
         x = self.wte(input_ids)
         print(x)
+        print(x.shape)
+        return x
         if attention_mask is not None:
             # convert 0's to -infs, 1's to 0's, and make it broadcastable
             attention_mask = mx.log(attention_mask)
@@ -168,16 +170,13 @@ if __name__ == "__main__":
     model.update(weights)
 
     tokenizer = AutoTokenizer.from_pretrained("microsoft/phi-2", trust_remote_code=True)
-
-    batch = '''```python
-def print_prime(n):
+    tokens = tokenizer('''def print_prime(n):
    """
    Print all primes between 1 and n
-   """'''
+   """''', return_tensors="np", return_attention_mask=False)
 
-    tokens = tokenizer(batch, return_tensors="np", return_attention_mask=False)
     tokens = {key: mx.array(v) for key, v in tokens.items()}
 
-    mlx_output = model(**tokens)
+    print(tokens["input_ids"])
 
-    print(mlx_output)
+    mlx_output = model(**tokens)
