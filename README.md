@@ -20,7 +20,7 @@ This project will be considered complete once these goals are achieved.
 - [ ] Phi-2 reimplementation in MLX
 - [ ] GPT-2 reimplementation in MLX
 - [x] ~~llama reimplementation~~ (train your own makemore llama w/ `python train.py`!)
-- [ ] conversion script for HF format to MLX format
+- [x] ~~conversion script for HF format to MLX format~~ (check `phi2/convert.py`)
 - [ ] speculative decoding
 - [x] ~~AdamW implementation~~ [merged!](https://github.com/ml-explore/mlx/pull/72)
 - [ ] learning rate scheduling 
