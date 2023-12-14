@@ -93,18 +93,11 @@ class ParallelBlock(nn.Module):
 
     def __call__(self, x, x_mask):
         residual = x
-        y = self.ln(x)
-        attn_outputs, _ = self.self_attention(y, y, y, x_mask)
-        ff_hidden_states = self.fc2(self.act(self.fc1(y)))
-        #x = x + y
+        hidden_states = self.ln(x)
+        attn_outputs, _ = self.self_attention(hidden_states, hidden_states, hidden_states, x_mask)
+        ff_hidden_states = self.fc2(self.act(self.fc1(hidden_states)))
 
         hidden_states = attn_outputs + ff_hidden_states + residual
-
-        #y = self.ln(x)
-        #y = self.fc1(y)
-        #y = self.act(y)
-        #y = self.fc2(y)
-        #x = x + y
 
         return hidden_states
 
@@ -121,11 +114,7 @@ class TransformerDecoder(nn.Module):
 
     def __call__(self, x, x_mask):
         for layer in self.h:
-            #print(x)
             x = layer(x, x_mask)
-            #print(x)
-            #print(x.shape)
-            print(x)
         return x
 
 
@@ -151,6 +140,8 @@ class Phi2(nn.Module):
             # convert 0's to -infs, 1's to 0's, and make it broadcastable
             attention_mask = mx.log(attention_mask)
             attention_mask = mx.expand_dims(attention_mask, (1, 2))
+        else:
+            attention_mask = nn.MultiHeadAttention.create_additive_causal_mask(x.shape[1])
 
         y = self.transformer(x, attention_mask)
         return self.lm_head(y, attention_mask)
@@ -182,6 +173,5 @@ if __name__ == "__main__":
 
     tokens = {key: mx.array(v) for key, v in tokens.items()}
 
-    print(tokens["input_ids"])
-
     mlx_output = model(**tokens)
+    print(mlx_output)
