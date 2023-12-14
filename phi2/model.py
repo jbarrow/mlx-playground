@@ -144,7 +144,49 @@ class Phi2(nn.Module):
             attention_mask = nn.MultiHeadAttention.create_additive_causal_mask(x.shape[1])
 
         y = self.transformer(x, attention_mask)
-        return self.lm_head(y, attention_mask)
+        return self.lm_head(y)
+    
+
+    def generate(self, input_ids, temp=1.0):
+        cache = input_ids.tolist()
+
+        # Make an additive causal mask. We will need that to process the prompt.
+        mask = nn.MultiHeadAttention.create_additive_causal_mask(input_ids.shape[1])
+        mask = mask.astype(self.wte.weight.dtype)
+
+        # First we process the prompt x the same way as in __call__ but
+        # save the caches in cache
+        x = self.wte(input_ids)
+        #for l in self.layers:
+        #    x, c = l(x, mask=mask)
+            # cache.append(c)  # <--- we store the per layer cache in a
+                             #      simple python list
+        x = self.transformer(x, mask)
+        y = self.lm_head(x[:, -1])  # <--- we only care about the last logits
+                                     #      that generate the next token
+        y = mx.random.categorical(y * (1/temp))
+
+        # y now has size [1]
+        # Since MLX is lazily evaluated nothing is computed yet.
+        # Calling y.item() would force the computation to happen at
+        # this point but we can also choose not to do that and let the
+        # user choose when to start the computation.
+        yield y
+        cache += [y.item()]
+
+        # Now we parsed the prompt and generated the first token we
+        # need to feed it back into the model and loop to generate the
+        # rest.
+        while True:
+            # Unsqueezing the last dimension to add a sequence length
+            # dimension of 1
+            x = self.wte(mx.array(cache))
+            x = self.transformer(x, mask)
+            y = self.lm_head(x[:, -1])
+            y = mx.random.categorical(y * (1/temp))
+            cache += [y[0].item()]
+
+            yield y
 
 
 class LanguageModelingHead(nn.Module):
@@ -152,7 +194,7 @@ class LanguageModelingHead(nn.Module):
         self.ln = nn.LayerNorm(config.model_dim)
         self.linear = nn.Linear(config.model_dim, config.num_vocab)
 
-    def __call__(self, inputs, mask):
+    def __call__(self, inputs):
         return self.linear(self.ln(inputs))
 
 
@@ -173,5 +215,10 @@ if __name__ == "__main__":
 
     tokens = {key: mx.array(v) for key, v in tokens.items()}
 
-    mlx_output = model(**tokens)
-    print(mlx_output)
+
+    print('''def print_prime(n):
+   """
+   Print all primes between 1 and n
+   """''')
+    for output in model.generate(**tokens):
+        print(tokenizer.decode(output.item()))
