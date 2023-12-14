@@ -12,17 +12,20 @@ The aim is that the only dependencies are:
 With an optional dev dependency of:
 - `transformers` for downloading and converting weights
 
-## Project Goals
+## Accomplishments
 
-These will be checked off as they're completed.
+- [x] ~~makemore llama reimplementation~~ (train your own w/ `python train.py`!)
+- [x] [BERT merged into `mlx-examples`](https://github.com/ml-explore/mlx-examples/pull/43)
+- [x] [Phi-2 merged into `mlx-examples`](https://github.com/ml-explore/mlx-examples/pull/97)
+- [x] [AdamW merged into `mlx`](https://github.com/ml-explore/mlx/pull/72)
+
+## Remaining Goals
+
 This project will be considered complete once these goals are achieved.
 
-- [ ] Phi-2 reimplementation in MLX
-- [ ] GPT-2 reimplementation in MLX
-- [x] ~~llama reimplementation~~ (train your own makemore llama w/ `python train.py`!)
-- [x] ~~conversion script for HF format to MLX format~~ (check `phi2/convert.py`)
+- [ ] finetune BERT
+- [ ] GPT-2 reimplementation and loading in MLX
 - [ ] speculative decoding
-- [x] ~~AdamW implementation~~ [merged into MLX core!](https://github.com/ml-explore/mlx/pull/72)
 - [ ] learning rate scheduling 
 
 ## Installation
