@@ -7,9 +7,10 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-mlx = "^0.0.3"
+mlx = "0.0.5"
 sentencepiece = "^0.1.99"
 tqdm = "^4.66.1"
+einops = "^0.7.0"
 
 
 [tool.poetry.group.dev.dependencies]
