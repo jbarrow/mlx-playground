@@ -17,6 +17,7 @@ With an optional dev dependency of:
 These will be checked off as they're completed.
 This project will be considered complete once these goals are achieved.
 
+- [ ] Phi-2 reimplementation in MLX
 - [ ] GPT-2 reimplementation in MLX
 - [x] ~~llama reimplementation~~ (train your own makemore llama w/ `python train.py`!)
 - [ ] conversion script for HF format to MLX format
@@ -27,21 +28,23 @@ This project will be considered complete once these goals are achieved.
 ## Installation
 
 ```
-pip install -Ue .
+poetry install --no-root
 ```
 
-## Usage
+## Phi-2
 
-🚧 TBD
+To download and convert the model:
 
-Something akin to the following:
-
-```sh
-python train.py <train> <val> <other params>
+```sh 
+python phi2/convert.py
 ```
 
+That will fill in `weights/phi-2.npz`.
+
+🚧 (Not yet done) To run the model:
+
 ```sh
-python generate.py <model> <prompt>
+python phi2/generate.py
 ```
 
 ## Acknowledgements
