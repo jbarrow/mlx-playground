@@ -81,7 +81,7 @@ class RoPEAttention(nn.Module):
         return self.out_proj(values_hat), (keys, values)
 
 
-class TransformerDecoderLayer(nn.Module):
+class ParallelBlock(nn.Module):
     def __init__(self, dims: int, num_heads: int, mlp_dims: Optional[int] = None):
         super().__init__()
         mlp_dims = mlp_dims or dims * 4
@@ -92,17 +92,21 @@ class TransformerDecoderLayer(nn.Module):
         self.act = NewGELUActivation()
 
     def __call__(self, x, x_mask):
+        residual = x
         y = self.ln(x)
-        y, _ = self.self_attention(y, y, y, x_mask)
-        x = x + y
+        attn_outputs, _ = self.self_attention(y, y, y, x_mask)
+        ff_hidden_states = self.fc2(self.act(self.fc1(y)))
+        #x = x + y
 
-        y = self.ln(x)
-        y = self.fc1(y)
-        y = self.act(y)
-        y = self.fc2(y)
-        x = x + y
+        hidden_states = attn_outputs + ff_hidden_states + residual
 
-        return x
+        #y = self.ln(x)
+        #y = self.fc1(y)
+        #y = self.act(y)
+        #y = self.fc2(y)
+        #x = x + y
+
+        return hidden_states
 
 
 class TransformerDecoder(nn.Module):
@@ -111,16 +115,17 @@ class TransformerDecoder(nn.Module):
     ):
         super().__init__()
         self.h = [
-            TransformerDecoderLayer(dims, num_heads, mlp_dims)
+            ParallelBlock(dims, num_heads, mlp_dims)
             for i in range(num_layers)
         ]
 
     def __call__(self, x, x_mask):
-        for layer in self.h[:1]:
-            print(x)
+        for layer in self.h:
+            #print(x)
             x = layer(x, x_mask)
+            #print(x)
+            #print(x.shape)
             print(x)
-            print(x.shape)
         return x
 
 
